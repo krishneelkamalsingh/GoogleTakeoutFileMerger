@@ -20,8 +20,8 @@ class Program
                 Console.WriteLine(folder);
             }
 
-            // Create folders based on the last folder names inside a "Merged" folder and copy files
-            List<string> createdFolderPaths = CreateFoldersAndCopyFiles(startPath, lastFoldersWithFiles);
+            // Create folders based on the last folder names inside a "Merged" folder and copy files sorted by extension
+            List<string> createdFolderPaths = CreateFoldersAndSortByExtension(startPath, lastFoldersWithFiles);
 
             // Join the created folder paths to write all of them to the file
             string content = string.Join(Environment.NewLine, createdFolderPaths);
@@ -76,7 +76,7 @@ class Program
         return foldersWithFiles;
     }
 
-    static List<string> CreateFoldersAndCopyFiles(string baseDirectory, List<string> lastFoldersWithFiles)
+    static List<string> CreateFoldersAndSortByExtension(string baseDirectory, List<string> lastFoldersWithFiles)
     {
         List<string> createdFolders = new List<string>();
 
@@ -91,25 +91,39 @@ class Program
             string folderName = Path.GetFileName(folderPath);
             string newFolderPath = Path.Combine(mergedFolderPath, folderName);
 
-            // Create the folder inside "Merged" if it doesn't already exist
+            // Create the folder for the deepest directory inside "Merged" if it doesn't already exist
             if (!Directory.Exists(newFolderPath))
             {
                 Directory.CreateDirectory(newFolderPath);
-                Console.WriteLine($"Created folder: {newFolderPath}");
+                Console.WriteLine($"Created folder for deepest directory: {newFolderPath}");
             }
 
-            // Copy all files from the deepest folder to the new folder in "Merged"
+            // Copy all files from the deepest folder to subfolders in "Merged" based on file extensions
             foreach (string filePath in Directory.GetFiles(folderPath))
             {
-                string fileName = Path.GetFileName(filePath);
-                string destFilePath = Path.Combine(newFolderPath, fileName);
+                string fileExtension = Path.GetExtension(filePath).TrimStart('.').ToUpper(); // Get extension without the dot and convert to uppercase
+                string extensionFolderPath = Path.Combine(newFolderPath, fileExtension);
 
-                // Copy the file to the new location
+                // Create the extension-named subfolder inside the deepest folder if it doesn't already exist
+                if (!Directory.Exists(extensionFolderPath))
+                {
+                    Directory.CreateDirectory(extensionFolderPath);
+                    Console.WriteLine($"Created subfolder for extension: {extensionFolderPath}");
+                }
+
+                // Copy the file to the appropriate extension folder
+                string fileName = Path.GetFileName(filePath);
+                string destFilePath = Path.Combine(extensionFolderPath, fileName);
+
                 File.Copy(filePath, destFilePath, overwrite: true);
                 Console.WriteLine($"Copied file: {filePath} to {destFilePath}");
-            }
 
-            createdFolders.Add(newFolderPath);
+                // Add the folder path to the list if it was newly created
+                if (!createdFolders.Contains(newFolderPath))
+                {
+                    createdFolders.Add(newFolderPath);
+                }
+            }
         }
 
         return createdFolders;
